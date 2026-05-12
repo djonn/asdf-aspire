@@ -1,17 +1,6 @@
-<div align="center">
+# asdf-aspire
 
-# asdf-aspire [![Build](https://github.com/djonn/asdf-aspire/actions/workflows/build.yml/badge.svg)](https://github.com/djonn/asdf-aspire/actions/workflows/build.yml) [![Lint](https://github.com/djonn/asdf-aspire/actions/workflows/lint.yml/badge.svg)](https://github.com/djonn/asdf-aspire/actions/workflows/lint.yml)
-
-[aspire](https://github.com/dotnet/aspire) plugin for the [asdf version manager](https://asdf-vm.com).
-
-</div>
-
-# Contents
-
-- [Dependencies](#dependencies)
-- [Install](#install)
-- [Contributing](#contributing)
-- [License](#license)
+Install and manage the [aspire](https://github.com/dotnet/aspire) cli using the [asdf version manager](https://asdf-vm.com) or [mise](https://mise.jdx.dev/).
 
 # Dependencies
 
@@ -19,6 +8,8 @@
 - `sha512sum` or `shasum` for checksum validation.
 
 # Install
+
+If using mise just replace `asdf` with `mise` in any of the commands.
 
 Plugin:
 
@@ -28,7 +19,7 @@ asdf plugin add aspire
 asdf plugin add aspire https://github.com/djonn/asdf-aspire.git
 ```
 
-aspire:
+Install and manage:
 
 ```shell
 # Show all installable versions
@@ -44,5 +35,4 @@ asdf global aspire latest
 aspire --version
 ```
 
-Check [asdf](https://github.com/asdf-vm/asdf) readme for more instructions on how to
-install & manage versions.
+Check [asdf](https://github.com/asdf-vm/asdf) or [mise](https://github.com/jdx/mise) readme for more instructions on how to install & manage versions.
