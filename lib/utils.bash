@@ -2,8 +2,7 @@
 
 set -euo pipefail
 
-# TODO: Ensure this is the correct GitHub homepage where releases can be downloaded for aspire.
-GH_REPO="https://github.com/microsoft/aspire"
+GH_REPO="https://github.com/dotnet/aspire"
 TOOL_NAME="aspire"
 TOOL_TEST="aspire --version"
 
@@ -27,25 +26,111 @@ sort_versions() {
 list_github_tags() {
 	git ls-remote --tags --refs "$GH_REPO" |
 		grep -o 'refs/tags/.*' | cut -d/ -f3- |
-		sed 's/^v//' # NOTE: You might want to adapt this sed to remove non-version strings from tags
+		sed 's/^v//'
 }
 
 list_all_versions() {
-	# TODO: Adapt this. By default we simply list the tag names from GitHub releases.
-	# Change this function if aspire has other means of determining installable versions.
 	list_github_tags
 }
 
+get_platform() {
+	local os arch
+
+	case "$(uname -s)" in
+	Darwin*) os="osx" ;;
+	Linux*)
+		if command -v ldd >/dev/null 2>&1 && ldd --version 2>&1 | grep -q musl; then
+			os="linux-musl"
+		else
+			os="linux"
+		fi
+		;;
+	CYGWIN* | MINGW* | MSYS*) os="win" ;;
+	*) fail "Unsupported operating system: $(uname -s)" ;;
+	esac
+
+	case "$(uname -m)" in
+	x86_64 | amd64) arch="x64" ;;
+	aarch64 | arm64) arch="arm64" ;;
+	*) fail "Unsupported architecture: $(uname -m)" ;;
+	esac
+
+	echo "${os}-${arch}"
+}
+
+get_download_url() {
+	local version="$1"
+	local platform="$2"
+	local extension
+
+	if [[ "$platform" == win-* ]]; then
+		extension="zip"
+	else
+		extension="tar.gz"
+	fi
+
+	echo "${GH_REPO}/releases/download/v${version}/aspire-cli-${platform}-${version}.${extension}"
+}
+
+get_checksum_url() {
+	local version="$1"
+	local platform="$2"
+	local extension
+
+	if [[ "$platform" == win-* ]]; then
+		extension="zip"
+	else
+		extension="tar.gz"
+	fi
+
+	echo "${GH_REPO}/releases/download/v${version}/aspire-cli-${platform}-${version}.${extension}.sha512"
+}
+
 download_release() {
-	local version filename url
+	local version filename platform url checksum_url
 	version="$1"
 	filename="$2"
 
-	# TODO: Adapt the release URL convention for aspire
-	url="$GH_REPO/archive/v${version}.tar.gz"
+	platform=$(get_platform)
+	url=$(get_download_url "$version" "$platform")
+	checksum_url=$(get_checksum_url "$version" "$platform")
 
-	echo "* Downloading $TOOL_NAME release $version..."
+	echo "* Downloading $TOOL_NAME release $version for $platform..."
 	curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
+
+	# Download and validate checksum
+	local checksum_file="${filename}.sha512"
+	echo "* Downloading checksum..."
+	curl "${curl_opts[@]}" -o "$checksum_file" "$checksum_url" || fail "Could not download checksum from $checksum_url"
+
+	echo "* Validating checksum..."
+	validate_checksum "$filename" "$checksum_file"
+}
+
+validate_checksum() {
+	local archive_file="$1"
+	local checksum_file="$2"
+
+	local checksum_cmd=""
+	if command -v sha512sum >/dev/null 2>&1; then
+		checksum_cmd="sha512sum"
+	elif command -v shasum >/dev/null 2>&1; then
+		checksum_cmd="shasum -a 512"
+	else
+		fail "Neither sha512sum nor shasum is available. Please install one of them to validate checksums."
+	fi
+
+	local expected_checksum
+	expected_checksum=$(tr -d '\n\r' <"$checksum_file" | tr '[:upper:]' '[:lower:]')
+
+	local actual_checksum
+	actual_checksum=$(${checksum_cmd} "$archive_file" | cut -d' ' -f1)
+
+	if [[ "$expected_checksum" != "$actual_checksum" ]]; then
+		fail "Checksum validation failed! Expected: $expected_checksum, Got: $actual_checksum"
+	fi
+
+	echo "* Checksum validated successfully"
 }
 
 install_version() {
@@ -59,9 +144,24 @@ install_version() {
 
 	(
 		mkdir -p "$install_path"
-		cp -r "$ASDF_DOWNLOAD_PATH"/* "$install_path"
 
-		# TODO: Assert aspire executable exists.
+		local platform
+		platform=$(get_platform)
+
+		echo "* Installing $TOOL_NAME $version..."
+
+		# Extract the archive based on platform
+		if [[ "$platform" == win-* ]]; then
+			# Windows uses zip
+			if ! command -v unzip >/dev/null 2>&1; then
+				fail "unzip command not found. Please install unzip."
+			fi
+			unzip -o "$ASDF_DOWNLOAD_PATH"/*.zip -d "$install_path" || fail "Failed to extract archive"
+		else
+			# Unix/Linux/macOS uses tar.gz
+			tar -xzf "$ASDF_DOWNLOAD_PATH"/*.tar.gz -C "$install_path" || fail "Failed to extract archive"
+		fi
+
 		local tool_cmd
 		tool_cmd="$(echo "$TOOL_TEST" | cut -d' ' -f1)"
 		test -x "$install_path/$tool_cmd" || fail "Expected $install_path/$tool_cmd to be executable."

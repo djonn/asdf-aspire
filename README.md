@@ -2,7 +2,7 @@
 
 # asdf-aspire [![Build](https://github.com/djonn/asdf-aspire/actions/workflows/build.yml/badge.svg)](https://github.com/djonn/asdf-aspire/actions/workflows/build.yml) [![Lint](https://github.com/djonn/asdf-aspire/actions/workflows/lint.yml/badge.svg)](https://github.com/djonn/asdf-aspire/actions/workflows/lint.yml)
 
-[aspire](https://github.com/microsoft/aspire) plugin for the [asdf version manager](https://asdf-vm.com).
+[aspire](https://github.com/dotnet/aspire) plugin for the [asdf version manager](https://asdf-vm.com).
 
 </div>
 
@@ -15,10 +15,8 @@
 
 # Dependencies
 
-**TODO: adapt this section**
-
-- `bash`, `curl`, `tar`, and [POSIX utilities](https://pubs.opengroup.org/onlinepubs/9699919799/idx/utilities.html).
-- `SOME_ENV_VAR`: set this environment variable in your shell config to load the correct version of tool x.
+- `bash`, `curl`, `tar` (or `unzip` on Windows), and [POSIX utilities](https://pubs.opengroup.org/onlinepubs/9699919799/idx/utilities.html).
+- `sha512sum` or `shasum` for checksum validation.
 
 # Install
 
